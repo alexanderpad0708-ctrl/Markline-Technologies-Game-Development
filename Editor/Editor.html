@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Markline Dimensions Editor</title>
+
+<style>
+*{
+    margin:0;
+    padding:0;
+    box-sizing:border-box;
+    font-family:"Comic Sans MS",Arial;
+}
+body{
+    background:linear-gradient(135deg,#6ea8ff,#9fd3ff);
+    color:#000;
+    overflow:hidden;
+}
+
+/* START SCREEN */
+#startScreen{display:block;}
+#editorRoot{
+    display:none;
+    flex-direction:column;
+    height:100vh;
+}
+
+/* TOPBAR */
+.editor-topbar{
+    background:#4a6cff;
+    padding:6px 10px;
+    display:flex;
+    align-items:center;
+    gap:10px;
+    border-bottom:4px solid #2f49c7;
+    color:#fff;
+}
+.editor-topbar button,
+.editor-topbar input[type=color]{
+    font-size:13px;
+    padding:5px 9px;
+    border-radius:8px;
+    border:2px solid #000;
+    background:#ffeb3b;
+    cursor:pointer;
+}
+
+/* MAIN LAYOUT */
+#editorMain{
+    flex:1;
+    display:flex;
+    height:calc(100vh - 52px);
+}
+
+/* TOOLBOX */
+#toolbox{
+    width:70px;
+    background:#6ea8ff;
+    border-right:3px solid #2f49c7;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    padding-top:10px;
+    gap:10px;
+    position:relative;
+}
+.tool-btn{
+    width:48px;
+    height:48px;
+    border-radius:12px;
+    border:3px solid #000;
+    background:#ffeb3b;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    cursor:pointer;
+    font-size:22px;
+    font-weight:bold;
+}
+.tool-btn.active{
+    background:#ffe000;
+    box-shadow:0 0 0 4px #ff5722;
+}
+
+/* SHAPES MENU */
+#shapesMenu{
+    position:absolute;
+    left:70px;
+    top:60px;
+    width:140px;
+    background:#ffeb3b;
+    border:3px solid #000;
+    border-radius:10px;
+    padding:6px;
+    font-size:12px;
+    display:none;
+    z-index:50;
+}
+.shapeItem{
+    margin-top:3px;
+    padding:3px 4px;
+    border:1px solid #000;
+    border-radius:6px;
+    background:#fff9c4;
+    cursor:pointer;
+}
+
+/* CENTER AREA */
+#centerArea{
+    flex:1;
+    display:flex;
+    flex-direction:column;
+}
+#viewportWrapper{
+    flex:1;
+    position:relative;
+    background:#9fd3ff;
+    border-bottom:3px solid #2f49c7;
+}
+#canvas3D{
+    position:absolute;
+    top:0;
+    left:0;
+    width:100%;
+    height:100%;
+}
+
+/* RIGHT PANEL */
+#rightPanel{
+    width:260px;
+    background:#6ea8ff;
+    border-left:3px solid #2f49c7;
+    display:flex;
+    flex-direction:column;
+}
+#hierarchy{
+    flex:1;
+    padding:8px;
+    border-bottom:3px solid #2f49c7;
+    overflow-y:auto;
+    background:rgba(255,255,255,0.4);
+}
+.item{
+    padding:3px 4px;
+    margin-bottom:3px;
+    border-radius:6px;
+    border:1px solid #000;
+    background:#ffeb3b;
+    font-size:12px;
+    cursor:pointer;
+}
+.item.selected{
+    background:#ffe000;
+    box-shadow:0 0 0 2px #ff5722;
+}
+
+/* FX POPUP */
+#fxPopup{
+    position:fixed;
+    top:50%;
+    left:50%;
+    width:360px;
+    transform:translate(-50%,-50%);
+    background:#9fd3ff;
+    border:4px solid #2f49c7;
+    border-radius:16px;
+    padding:10px;
+    display:none;
+    z-index:999;
+}
+#fxPopupCanvas{
+    width:100%;
+    height:180px;
+    background:#fff;
+    border:3px solid #000;
+    border-radius:12px;
+}
+</style>
+</head>
+
+<body>
+
+<!-- START SCREEN -->
+<div id="startScreen">
+    <div style="padding:40px;text-align:center;background:#4a6cff;color:#fff;">
+        <h1>Markline Dimensions</h1>
+        <p>Build silly, powerful 2D & 3D games.</p>
+    </div>
+
+    <div style="text-align:center;margin-top:80px;">
+        <button class="button" onclick="startProject('2d')">Start 2D Game</button><br><br>
+        <button class="button" onclick="startProject('3d')">Start 3D Game</button>
+    </div>
+</div>
+
+<!-- EDITOR ROOT -->
+<div id="editorRoot">
+
+    <div class="editor-topbar">
+        <span id="modeLabel"></span>
+
+        <button onclick="enterPlayMode()">Playtest</button>
+        <button onclick="exitPlayMode()">Stop</button>
+
+        <button onclick="openFXPopup()">FX ★</button>
+
+        <button onclick="toggleAdvancedDrawer()">Advanced</button>
+
+        <span style="margin-left:auto;"></span>
+
+        <span>Sky:</span>
+        <input type="color" id="skyColor" value="#808080" onchange="onSkyChange(this.value)">
+    </div>
+
+    <div id="editorMain">
+
+        <div id="toolbox">
+            <div class="tool-btn active" id="toolMove" onclick="setTool('move')">↔</div>
+            <div class="tool-btn" id="toolScale" onclick="setTool('scale')">⇲</div>
+            <div class="tool-btn" id="toolRotate" onclick="setTool('rotate')">⟳</div>
+            <div class="tool-btn" id="toolSelect" onclick="setTool('select')">✦</div>
+            <div class="tool-btn" id="toolShapes" onclick="toggleShapesMenu()">▢</div>
+
+            <div id="shapesMenu">
+                <div><b>Shapes</b></div>
+                <div id="shapesList"></div>
+            </div>
+        </div>
+
+        <div id="centerArea">
+            <div id="viewportWrapper">
+                <canvas id="canvas3D"></canvas>
+            </div>
+        </div>
+
+        <div id="rightPanel">
+            <div id="hierarchy">
+                <h3>Hierarchy</h3>
+                <div id="hierarchyItems"></div>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<!-- FX POPUP -->
+<div id="fxPopup">
+    <h3>FX Editor</h3>
+    <canvas id="fxPopupCanvas"></canvas>
+    <button onclick="cancelFX()">Close</button>
+</div>
+
+<script src="https://cdn.babylonjs.com/babylon.js"></script>
+<script src="script.lib.js"></script>
+</body>
+</html>

@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Markline Dimensions Countdown</title>
+
+<style>
+/* === MARKLINE BASE STYLE (your style) === */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: "Comic Sans MS", Arial, sans-serif;
+}
+
+body {
+    background: linear-gradient(135deg, #6ea8ff, #9fd3ff);
+    color: #000;
+    text-align: center;
+}
+
+/* Top bar */
+.topbar {
+    background: #4a6cff;
+    padding: 25px;
+    text-align: center;
+    color: white;
+    border-bottom: 5px solid #2f49c7;
+}
+
+.topbar h1 {
+    font-size: 40px;
+    font-weight: bold;
+}
+
+.slogan {
+    font-size: 18px;
+    margin-top: 5px;
+    font-weight: bold;
+    color: #ffeb3b;
+}
+
+/* Countdown container */
+.countbox {
+    margin: 80px auto;
+    max-width: 600px;
+    background: white;
+    padding: 30px;
+    border-radius: 20px;
+    border: 4px solid #000;
+    box-shadow: 0 0 0 6px #ffeb3b;
+}
+
+.countbox h2 {
+    font-size: 32px;
+    margin-bottom: 20px;
+}
+
+/* Timer numbers */
+.timer {
+    font-size: 48px;
+    font-weight: bold;
+    margin-top: 10px;
+    color: #4a6cff;
+    text-shadow: 2px 2px #ffeb3b;
+}
+
+/* OUT message */
+.outmsg {
+    font-size: 32px;
+    font-weight: bold;
+    color: #4a6cff;
+    margin-top: 20px;
+    text-shadow: 2px 2px #ffeb3b;
+}
+
+.outsub {
+    font-size: 22px;
+    margin-top: 10px;
+    color: #000;
+}
+
+/* Button */
+.button {
+    display: inline-block;
+    margin-top: 25px;
+    padding: 14px 28px;
+    background: #ffeb3b;
+    color: #000;
+    text-decoration: none;
+    border-radius: 10px;
+    font-size: 20px;
+    font-weight: bold;
+    border: 2px solid #000;
+    transition: 0.2s;
+    cursor: pointer;
+}
+
+.button:hover {
+    background: #ffe000;
+}
+
+/* Donation buttons */
+.paybutton {
+    display: block;
+    width: 100%;
+    margin-top: 12px;
+    padding: 12px;
+    background: #4a6cff;
+    color: white;
+    text-decoration: none;
+    border-radius: 10px;
+    border: 2px solid #000;
+    font-size: 18px;
+    font-weight: bold;
+}
+
+.paybutton:hover {
+    background: #3a55d6;
+}
+</style>
+</head>
+
+<body>
+
+<div class="topbar">
+    <h1>Markline Dimensions</h1>
+    <div class="slogan">Offline Release Countdown</div>
+</div>
+
+<div class="countbox">
+    <h2>Countdown to May 28 • 5:23 PM EST</h2>
+
+    <div id="timer" class="timer">Loading…</div>
+
+    <!-- PROGRESS BAR -->
+    <div style="margin-top:25px;">
+        <div style="font-size:20px; font-weight:bold; margin-bottom:8px;">
+            Progress to Launch:
+        </div>
+
+        <div style="
+            width:100%;
+            height:35px;
+            background:#d0e6ff;
+            border:3px solid #000;
+            border-radius:10px;
+            overflow:hidden;
+        ">
+            <div id="progressFill" style="
+                height:100%;
+                width:0%;
+                background:#ffeb3b;
+                border-right:3px solid #000;
+                transition:width 0.5s;
+            "></div>
+        </div>
+
+        <div id="progressText" style="margin-top:8px; font-size:18px; font-weight:bold;">
+            0%
+        </div>
+    </div>
+
+    <div id="out" style="display:none;">
+        <div class="outmsg">Markline Dimension's OUT!!!</div>
+        <div class="outsub">Explore new worlds, and fun activities!</div>
+    </div>
+
+    <!-- INFO BUTTON -->
+    <a class="button" onclick="toggleInfo()">What is Markline Dimensions?</a>
+
+    <div id="infoBox" style="display:none; margin-top:25px; text-align:left; background:white; padding:20px; border-radius:15px; border:3px solid #000;">
+        <h3 style="font-size:26px; margin-bottom:10px;">What is Markline Dimensions?</h3>
+
+        <p style="font-size:18px; line-height:1.4; margin-bottom:10px;">
+            Markline Dimensions is a kid‑friendly gaming initiative focused on safe, fun, and creative play.
+            It’s designed to be a bright, welcoming space where kids and families can enjoy games and activities
+            without unsafe content or toxic behavior.
+        </p>
+
+        <p style="font-size:18px; line-height:1.4; margin-bottom:10px;">
+            Every donation supports real‑world causes:
+        </p>
+
+        <ul style="font-size:18px; line-height:1.4; margin-left:20px; margin-bottom:10px;">
+            <li>60% to St. Jude’s cancer research</li>
+            <li>20% to development <u>of</u> Markline Dimensions</li>
+            <li>20% to scout camps (Girl Scouts & Boy Scouts)</li>
+        </ul>
+    </div>
+
+    <!-- DONATE BUTTON -->
+    <a class="button" onclick="toggleDonate()">Donate</a>
+
+    <div id="donateBox" style="display:none; margin-top:25px; text-align:left; background:white; padding:20px; border-radius:15px; border:3px solid #000;">
+        <h3 style="font-size:26px; margin-bottom:10px;">Donate to Support Markline Dimensions</h3>
+
+        <p style="font-size:18px; line-height:1.4; margin-bottom:10px;">
+            Choose a donation method below:
+        </p>
+
+        <a href="#" class="paybutton">Pay with PayPal</a>
+        <a href="#" class="paybutton">Pay with Stripe</a>
+        <a href="#" class="paybutton">Pay Here</a>
+    </div>
+</div>
+
+<script>
+function updateTimer() {
+    const target = new Date("May 28, 2026 17:23:00 EST").getTime();
+    const now = new Date().getTime();
+    const diff = target - now;
+
+    const timerEl = document.getElementById("timer");
+    const outEl = document.getElementById("out");
+
+    if (diff <= 0) {
+        timerEl.style.display = "none";
+        outEl.style.display = "block";
+        return;
+    }
+
+    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+    const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+    const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+    const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+
+    timerEl.textContent =
+        days + "d " +
+        hours.toString().padStart(2, "0") + "h " +
+        minutes.toString().padStart(2, "0") + "m " +
+        seconds.toString().padStart(2, "0") + "s";
+}
+
+/* === HOURLY PROGRESS BAR: +0.1% PER HOUR === */
+const startTime = new Date("April 11, 2026 11:22:00 EST").getTime();
+let progress = 0;
+
+function updateProgress() {
+    const now = new Date().getTime();
+    const hoursPassed = (now - startTime) / (1000 * 60 * 60);
+
+    progress = hoursPassed * 0.1; // +0.1% per hour
+    progress = Math.min(progress, 100);
+
+    document.getElementById("progressFill").style.width = progress.toFixed(1) + "%";
+    document.getElementById("progressText").textContent = progress.toFixed(1) + "%";
+}
+
+function toggleInfo() {
+    const box = document.getElementById("infoBox");
+    box.style.display = (box.style.display === "none" || box.style.display === "") ? "block" : "none";
+}
+
+function toggleDonate() {
+    const box = document.getElementById("donateBox");
+    box.style.display = (box.style.display === "none" || box.style.display === "") ? "block" : "none";
+}
+
+setInterval(() => {
+    updateTimer();
+    updateProgress();
+}, 1000);
+
+updateTimer();
+updateProgress();
+</script>
+
+</body>
+</html>

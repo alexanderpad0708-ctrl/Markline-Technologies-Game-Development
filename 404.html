@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>AHHHH! We're lost in an invalid dimension!</title>
+  <link rel="stylesheet" href="404.css">
+</head>
+<body>
+
+  <div class="topbar">
+    <h1>Markline Dimensions! - Dimension not found!</h1>
+    <div class="slogan">Uh oh! Dimension not found!</div>
+  </div>
+
+  <div class="content">
+    <h2 id="animalText"></h2>
+    <p class="note">Broken Dimension shard! Let's get you home!</p>
+
+    <a href="index/index.html" class="button">Go back home!</a>
+  </div>
+
+  <script>
+    const animals = [
+      "ducks",
+      "cows",
+      "goats",
+      "frogs",
+      "cats",
+      "dogs",
+      "snails",
+      "pigeons",
+      "hamsters",
+      "turtles",
+      "bees",
+      "fishes",
+      "crabs",
+      "sheep",
+      "lizards",
+      "otters",
+      "moose",
+      "shrimp"
+    ];
+
+    const randomAnimal = animals[Math.floor(Math.random() * animals.length)];
+    document.getElementById("animalText").textContent = "Do you like: " + randomAnimal + "?";
+  </script>
+
+</body>
+</html>

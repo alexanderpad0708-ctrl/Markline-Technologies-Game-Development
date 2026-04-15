@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>MD 3D World – Markline Dimension</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+<div id="overlay">
+  Click to lock mouse • WASD to move • SPACE to jump • Scroll to zoom<br>
+  Arrows rotate camera • Auto 1st/3rd person
+</div>
+
+<!-- SHIFTLOCK CROSSHAIR -->
+<div id="crosshair" style="
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  width: 6px;
+  height: 6px;
+  background: white;
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  display: none;
+  z-index: 9999;
+"></div>
+
+<div id="leaderboard"></div>
+
+<button id="menuButton">Menu</button>
+
+<div id="menuOverlay">
+  <div id="menuPanel">
+    <h3>Dimension Menu</h3>
+
+    <div class="username-label">
+      Logged in as: <strong id="usernameLabel">&lt;username&gt;</strong>
+    </div>
+
+    <div class="menu-section">
+      <h4>Player Portraits</h4>
+      <div id="portraitList"></div>
+    </div>
+
+    <div class="menu-section">
+      <h4>Audio</h4>
+      <div id="audioRow">
+        <label for="audioSlider">Audio Volume</label>
+        <input id="audioSlider" type="range" min="0" max="100" value="70">
+      </div>
+    </div>
+
+    <div class="menu-section">
+      <h4>Session</h4>
+      <button id="leaveBtn" class="menu-btn">Leave Dimension</button>
+    </div>
+
+    <div id="menuClose">Close Menu</div>
+  </div>
+</div>
+
+<script type="module" src="main.js"></script>
+</body>
+</html>

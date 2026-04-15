@@ -1,0 +1,839 @@
+import * as THREE from 'https://unpkg.com/three@0.160.0/build/three.module.js';
+
+// ===== PLAYER LIST =====
+const players = [
+  "TheFireBlazer#MOD0001",
+  "QualityAssurance",
+  "TestSubject"
+];
+
+// ===== WORLD VARS =====
+let scene, camera, renderer;
+let terrain, player;
+let keys = {};
+let velocity = new THREE.Vector3();
+let onGround = false;
+
+let yaw = 0;
+let pitch = 0;
+let targetYaw = 0;
+let targetPitch = 0;
+
+let cameraDistance = 6;
+const minDistance = 1.5;
+const maxDistance = 18;
+
+const CAMERA_LERP = 0.18;
+const CAMERA_COLLISION_OFFSET = 0.3;
+let cameraPosCurrent = new THREE.Vector3();
+
+const clock = new THREE.Clock();
+
+// Physics
+const JUMP_FORCE = 12;
+const GRAVITY_AIR = -22;
+const GRAVITY_WATER = -8;
+const ACCEL_RATE = 30;
+const FRICTION = 10;
+const MAX_HORIZONTAL_SPEED = 22;
+const MAX_VERTICAL_SPEED = 80;
+const GROUND_SKIN = 0.03;
+
+// Dynamic player size
+let PLAYER_HEIGHT = 1.0;
+let PLAYER_RADIUS = 0.5;
+
+// Shiftlock
+let shiftLocked = false;
+let crosshair;
+
+// Lighting
+let sunLight;
+let timeOfDay = 0;
+
+// Rim-ish light
+let rimLight;
+
+// Water / lake
+let water;
+let waterBasePositions = null;
+
+const LAKE_CENTER = new THREE.Vector3(16, 0, -10);
+const LAKE_RADIUS = 16;      // bigger, nicer shoreline
+const LAKE_BOTTOM = -2.0;
+const WATER_LEVEL = 0.25;    // sits lower, more natural
+
+// Coords HUD
+let coordsDiv = null;
+
+// Raycast for ground
+const groundRaycaster = new THREE.Raycaster();
+const downVec = new THREE.Vector3(0, -1, 0);
+
+// Water state
+let wasInWater = false;
+
+// Splash FX
+const splashRings = [];
+const splashParticles = [];
+
+// Portraits
+class PortraitRenderer {
+  constructor(container, color = 0x88ccff, rotateSpeed = 0.6) {
+    this.container = container;
+    this.rotateSpeed = rotateSpeed;
+    this.lastTime = 0;
+
+    this.scene = new THREE.Scene();
+    this.scene.background = new THREE.Color(0x9fc7ff);
+
+    this.camera = new THREE.PerspectiveCamera(
+      35,
+      container.clientWidth / container.clientHeight,
+      0.1,
+      50
+    );
+    this.camera.position.set(0, 0.5, 3);
+
+    this.renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+    this.renderer.setSize(container.clientWidth, container.clientHeight);
+    this.renderer.outputColorSpace = THREE.SRGBColorSpace;
+    this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    this.renderer.toneMappingExposure = 1.0;
+    container.appendChild(this.renderer.domElement);
+
+    const ambient = new THREE.AmbientLight(0xffffff, 0.7);
+    this.scene.add(ambient);
+
+    const dir = new THREE.DirectionalLight(0xffffff, 0.8);
+    dir.position.set(3, 5, 2);
+    this.scene.add(dir);
+
+    const geo = new THREE.SphereGeometry(0.5, 32, 32);
+    const mat = new THREE.MeshStandardMaterial({
+      color,
+      roughness: 1.0,
+      metalness: 0.0
+    });
+    this.mesh = new THREE.Mesh(geo, mat);
+    this.scene.add(this.mesh);
+  }
+
+  render(time) {
+    const dt = (time - this.lastTime) / 1000;
+    if (dt < 1 / 20) return;
+    this.lastTime = time;
+
+    this.mesh.rotation.y += this.rotateSpeed * dt;
+    this.renderer.render(this.scene, this.camera);
+  }
+
+  resize() {
+    const w = this.container.clientWidth;
+    const h = this.container.clientHeight;
+    this.camera.aspect = w / h;
+    this.camera.updateProjectionMatrix();
+    this.renderer.setSize(w, h);
+  }
+}
+
+const portraitRenderers = [];
+
+// ===== INIT =====
+initWorld();
+setupUI();
+animate();
+animatePortraits();
+
+// ===== WORLD SETUP =====
+function initWorld() {
+  scene = new THREE.Scene();
+  scene.background = new THREE.Color(0x346beb);
+
+  camera = new THREE.PerspectiveCamera(
+    75,
+    window.innerWidth / window.innerHeight,
+    0.1,
+    1000
+  );
+
+  renderer = new THREE.WebGLRenderer({ antialias: true });
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  renderer.outputColorSpace = THREE.SRGBColorSpace;
+  renderer.toneMapping = THREE.ACESFilmicToneMapping;
+  renderer.toneMappingExposure = 1.05;
+  renderer.shadowMap.enabled = true;
+  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+  document.body.appendChild(renderer.domElement);
+
+  const ambient = new THREE.AmbientLight(0xffffff, 0.6);
+  scene.add(ambient);
+
+  sunLight = new THREE.DirectionalLight(0xfff4d0, 1.0);
+  sunLight.position.set(40, 60, 20);
+  sunLight.castShadow = true;
+  sunLight.shadow.mapSize.set(2048, 2048);
+  sunLight.shadow.camera.near = 1;
+  sunLight.shadow.camera.far = 200;
+  sunLight.shadow.camera.left = -60;
+  sunLight.shadow.camera.right = 60;
+  sunLight.shadow.camera.top = 60;
+  sunLight.shadow.camera.bottom = -60;
+  scene.add(sunLight);
+
+  rimLight = new THREE.DirectionalLight(0xaad4ff, 0.18);
+  rimLight.position.set(-1.5, 2.0, -1.2);
+  scene.add(rimLight);
+
+  const size = 200;
+  const segments = 128;
+  const geo = new THREE.PlaneGeometry(size, size, segments, segments);
+  geo.rotateX(-Math.PI / 2);
+
+  const pos = geo.attributes.position;
+  for (let i = 0; i < pos.count; i++) {
+    const x = pos.getX(i);
+    const z = pos.getZ(i);
+
+    // Base terrain
+    let h =
+      Math.sin(x * 0.18) * 1.5 +
+      Math.cos(z * 0.06) * 1.2 +
+      Math.sin(x * 0.15 + z * 0.12) * 0.7;
+
+    // 2-1-4 + C3 pond bowl
+    const dx = x - LAKE_CENTER.x;
+    const dz = z - LAKE_CENTER.z;
+    const dist = Math.sqrt(dx * dx + dz * dz);
+
+    if (dist < LAKE_RADIUS) {
+      const t = dist / LAKE_RADIUS;       // 0 = center, 1 = edge
+      const shoreline = t * t * t;        // natural cubic falloff
+      const craterDepth = 0.45;           // gentle crater
+      const bowl = THREE.MathUtils.lerp(
+        LAKE_BOTTOM * craterDepth,
+        h,
+        shoreline
+      );
+      h = bowl;
+    }
+
+    pos.setY(i, h);
+  }
+  pos.needsUpdate = true;
+  geo.computeVertexNormals();
+
+  const terrainMat = new THREE.MeshStandardMaterial({
+    color: 0x38b538,
+    roughness: 1.0,
+    metalness: 0.0
+  });
+
+  terrain = new THREE.Mesh(geo, terrainMat);
+  terrain.receiveShadow = true;
+  scene.add(terrain);
+
+  const playerGeo = new THREE.SphereGeometry(0.5, 32, 32);
+  const playerMat = new THREE.MeshStandardMaterial({
+    color: 0x5fb4ff,
+    roughness: 1.0,
+    metalness: 0.0
+  });
+  player = new THREE.Mesh(playerGeo, playerMat);
+  player.position.set(0, 5, 0);
+  player.castShadow = true;
+  scene.add(player);
+
+  const box = new THREE.Box3().setFromObject(player);
+  const sizeVec = new THREE.Vector3();
+  box.getSize(sizeVec);
+  PLAYER_HEIGHT = sizeVec.y || 1.0;
+  PLAYER_RADIUS = PLAYER_HEIGHT / 2;
+
+  cameraPosCurrent.set(0, 7, 8);
+
+  const waterSegments = 48;
+  const waterGeo = new THREE.PlaneGeometry(
+    LAKE_RADIUS * 2,
+    LAKE_RADIUS * 2,
+    waterSegments,
+    waterSegments
+  );
+  waterGeo.rotateX(-Math.PI / 2);
+
+  water = new THREE.Mesh(
+    waterGeo,
+    new THREE.MeshStandardMaterial({
+      color: 0x7fc9ff,
+      roughness: 0.9,
+      metalness: 0.0,
+      transparent: true,
+      opacity: 0.9
+    })
+  );
+  water.position.set(LAKE_CENTER.x, WATER_LEVEL, LAKE_CENTER.z);
+  water.receiveShadow = true;
+  scene.add(water);
+
+  const wPos = water.geometry.attributes.position;
+  waterBasePositions = new Float32Array(wPos.array.length);
+  waterBasePositions.set(wPos.array);
+
+  window.addEventListener("keydown", (e) => {
+    keys[e.code] = true;
+
+    if (e.code === "ShiftLeft" || e.code === "ShiftRight") {
+      if (!isPlayerInWater(player.position)) {
+        shiftLocked = !shiftLocked;
+        if (crosshair) {
+          crosshair.style.display = shiftLocked ? "block" : "none";
+        }
+      }
+    }
+  });
+
+  window.addEventListener("keyup", (e) => {
+    keys[e.code] = false;
+  });
+
+  const menuOverlay = document.getElementById("menuOverlay");
+
+  renderer.domElement.addEventListener("click", () => {
+    if (menuOverlay && menuOverlay.style.display !== "flex") {
+      renderer.domElement.requestPointerLock();
+    }
+  });
+
+  document.addEventListener("pointerlockchange", () => {
+    if (document.pointerLockElement === renderer.domElement) {
+      document.addEventListener("mousemove", onMouseMove);
+    } else {
+      document.removeEventListener("mousemove", onMouseMove);
+    }
+  });
+
+  window.addEventListener(
+    "wheel",
+    (e) => {
+      cameraDistance += e.deltaY * 0.01;
+      cameraDistance = Math.max(
+        minDistance,
+        Math.min(maxDistance, cameraDistance)
+      );
+    },
+    { passive: true }
+  );
+
+  window.addEventListener("resize", onResize);
+}
+
+// ===== UI =====
+function setupUI() {
+  const menuButton = document.getElementById("menuButton");
+  const menuOverlay = document.getElementById("menuOverlay");
+  const menuClose = document.getElementById("menuClose");
+  const audioSlider = document.getElementById("audioSlider");
+  const leaveBtn = document.getElementById("leaveBtn");
+  const usernameLabel = document.getElementById("usernameLabel");
+  const leaderboard = document.getElementById("leaderboard");
+  const portraitList = document.getElementById("portraitList");
+
+  crosshair = document.getElementById("crosshair");
+
+  if (usernameLabel) usernameLabel.textContent = "<username>";
+
+  const lbTitle = document.createElement("h3");
+  lbTitle.textContent = "Leaderboard";
+  const lbList = document.createElement("ul");
+
+  players.forEach((name) => {
+    const li = document.createElement("li");
+
+    const span = document.createElement("span");
+    span.className = "lb-name";
+    span.textContent = `${name} – 0 pts`;
+
+    const btn = document.createElement("button");
+    btn.className = "lb-report-btn";
+    btn.textContent = "Report";
+    btn.dataset.user = name;
+
+    btn.addEventListener("click", () => {
+      alert("Report submitted for: " + name);
+    });
+
+    li.appendChild(span);
+    li.appendChild(btn);
+    lbList.appendChild(li);
+  });
+
+  if (leaderboard) {
+    leaderboard.appendChild(lbTitle);
+    leaderboard.appendChild(lbList);
+  }
+
+  players.forEach((name, index) => {
+    const entry = document.createElement("div");
+    entry.className = "portrait-entry";
+
+    const canvasWrapper = document.createElement("div");
+    canvasWrapper.className = "portrait-canvas-wrapper";
+
+    const info = document.createElement("div");
+    info.className = "portrait-info";
+
+    const nameEl = document.createElement("div");
+    nameEl.className = "portrait-name";
+    nameEl.textContent = name;
+
+    const reportBtn = document.createElement("button");
+    reportBtn.className = "portrait-report-btn";
+    reportBtn.textContent = "Report";
+    reportBtn.addEventListener("click", () => {
+      alert("Report submitted for: " + name);
+    });
+
+    info.appendChild(nameEl);
+    info.appendChild(reportBtn);
+
+    entry.appendChild(canvasWrapper);
+    entry.appendChild(info);
+    if (portraitList) portraitList.appendChild(entry);
+
+    const color = index === 0 ? 0x5fb4ff : 0xffaa55;
+    const pr = new PortraitRenderer(canvasWrapper, color, 0.8);
+    portraitRenderers.push(pr);
+  });
+
+  if (menuButton && menuOverlay) {
+    menuButton.addEventListener("click", () => {
+      menuOverlay.style.display = "flex";
+      document.exitPointerLock?.();
+    });
+  }
+
+  if (menuClose && menuOverlay) {
+    menuClose.addEventListener("click", () => {
+      menuOverlay.style.display = "none";
+    });
+  }
+
+  if (audioSlider) {
+    audioSlider.addEventListener("input", () => {
+      // placeholder
+    });
+  }
+
+  if (leaveBtn) {
+    leaveBtn.addEventListener("click", () => {
+      window.location.href =
+        "C:\\Users\\Alexa\\OneDrive\\Desktop\\MarklineSite\\index\\index.html";
+    });
+  }
+
+  window.addEventListener("resize", () => {
+    portraitRenderers.forEach((pr) => pr.resize());
+  });
+
+  coordsDiv = document.getElementById("coords");
+  if (!coordsDiv) {
+    coordsDiv = document.createElement("div");
+    coordsDiv.id = "coords";
+    coordsDiv.style.position = "fixed";
+    coordsDiv.style.bottom = "10px";
+    coordsDiv.style.left = "10px";
+    coordsDiv.style.padding = "6px 10px";
+    coordsDiv.style.background = "rgba(0,0,0,0.35)";
+    coordsDiv.style.color = "white";
+    coordsDiv.style.fontFamily = "monospace";
+    coordsDiv.style.fontSize = "14px";
+    coordsDiv.style.borderRadius = "6px";
+    coordsDiv.style.pointerEvents = "none";
+    coordsDiv.style.zIndex = "9999";
+    document.body.appendChild(coordsDiv);
+  }
+}
+
+// ===== INPUT =====
+function onMouseMove(e) {
+  const sensitivity = 0.0025;
+  targetYaw -= e.movementX * sensitivity;
+  targetPitch -= e.movementY * sensitivity;
+
+  const maxPitch = Math.PI / 2 - 0.1;
+  targetPitch = Math.max(-maxPitch, Math.min(maxPitch, targetPitch));
+}
+
+function onResize() {
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+}
+
+// ===== MAIN LOOP =====
+function animate() {
+  requestAnimationFrame(animate);
+  const dt = clock.getDelta();
+  updateWorld(dt);
+  renderer.render(scene, camera);
+}
+
+function updateWorld(dt) {
+  const elapsed = clock.getElapsedTime();
+
+  const arrowTurnSpeed = 1.5 * dt;
+  if (keys["ArrowLeft"]) targetYaw += arrowTurnSpeed;
+  if (keys["ArrowRight"]) targetYaw -= arrowTurnSpeed;
+  if (keys["ArrowUp"]) targetPitch -= arrowTurnSpeed;
+  if (keys["ArrowDown"]) targetPitch += arrowTurnSpeed;
+
+  const maxPitch = Math.PI / 2 - 0.1;
+  targetPitch = Math.max(-maxPitch, Math.min(maxPitch, targetPitch));
+
+  yaw = THREE.MathUtils.lerp(yaw, targetYaw, 0.15);
+  pitch = THREE.MathUtils.lerp(pitch, targetPitch, 0.15);
+
+  if (water && waterBasePositions) {
+    const posAttr = water.geometry.attributes.position;
+    const arr = posAttr.array;
+    for (let i = 0; i < posAttr.count; i++) {
+      const ix = i * 3;
+      const baseX = waterBasePositions[ix + 0];
+      const baseY = waterBasePositions[ix + 1];
+      const baseZ = waterBasePositions[ix + 2];
+
+      const dx = baseX - LAKE_CENTER.x;
+      const dz = baseZ - LAKE_CENTER.z;
+      const dist = Math.sqrt(dx * dx + dz * dz);
+
+      if (dist > LAKE_RADIUS) {
+        // hide vertices outside the lake circle
+        arr[ix + 0] = baseX;
+        arr[ix + 1] = -999;
+        arr[ix + 2] = baseZ;
+        continue;
+      }
+
+      const wave =
+        Math.sin(baseX * 0.5 + elapsed * 1.4) * 0.06 +
+        Math.cos(baseZ * 0.45 + elapsed * 1.1) * 0.05;
+
+      arr[ix + 0] = baseX;
+      arr[ix + 1] = baseY + wave;
+      arr[ix + 2] = baseZ;
+    }
+    posAttr.needsUpdate = true;
+    water.geometry.computeVertexNormals();
+  }
+
+  const forward = new THREE.Vector3(
+    Math.sin(shiftLocked ? player.rotation.y : yaw),
+    0,
+    Math.cos(shiftLocked ? player.rotation.y : yaw)
+  );
+  const right = new THREE.Vector3().crossVectors(
+    new THREE.Vector3(0, 1, 0),
+    forward
+  );
+
+  const inWater = isPlayerInWater(player.position);
+
+  // ---- Horizontal movement with "move = no friction, idle = friction" ----
+  const accel = new THREE.Vector3();
+  if (keys["KeyA"]) accel.add(right);
+  if (keys["KeyD"]) accel.sub(right);
+  if (keys["KeyW"]) accel.add(forward);
+  if (keys["KeyS"]) accel.sub(forward);
+
+  const isMoving = accel.lengthSq() > 0;
+
+  if (isMoving) {
+    accel.normalize().multiplyScalar(ACCEL_RATE * (inWater ? 0.7 : 1.0));
+    velocity.x += accel.x * dt;
+    velocity.z += accel.z * dt;
+  } else {
+    const frictionStrength = inWater ? 0.7 : 1.0;
+    velocity.x -= velocity.x * FRICTION * dt * frictionStrength;
+    velocity.z -= velocity.z * FRICTION * dt * frictionStrength;
+  }
+
+  const hSq = velocity.x * velocity.x + velocity.z * velocity.z;
+  if (hSq > MAX_HORIZONTAL_SPEED * MAX_HORIZONTAL_SPEED) {
+    const factor = MAX_HORIZONTAL_SPEED / Math.sqrt(hSq);
+    velocity.x *= factor;
+    velocity.z *= factor;
+  }
+
+  // ---- Vertical physics ----
+  if (inWater) {
+    velocity.y += GRAVITY_WATER * dt;
+
+    const feetY = player.position.y - PLAYER_RADIUS;
+    const topY = player.position.y + PLAYER_RADIUS;
+    const submergedDepth = Math.max(0, WATER_LEVEL - feetY);
+    const maxDepth = topY - feetY;
+    const submerged = THREE.MathUtils.clamp(submergedDepth / maxDepth, 0, 1);
+
+    const buoyancyStrength = 10;
+    velocity.y += submerged * buoyancyStrength * dt;
+
+    if (keys["Space"]) {
+      velocity.y += 7 * dt;
+    }
+    if (
+      keys["ControlLeft"] ||
+      keys["ControlRight"] ||
+      keys["ShiftLeft"] ||
+      keys["ShiftRight"]
+    ) {
+      velocity.y -= 7 * dt;
+    }
+
+    velocity.x *= 1 - 1.2 * dt;
+    velocity.z *= 1 - 1.2 * dt;
+    velocity.y *= 1 - 1.0 * dt;
+  } else {
+    velocity.y += GRAVITY_AIR * dt;
+    if (velocity.y < 0) {
+      velocity.y += velocity.y * -0.25 * dt;
+    }
+  }
+
+  velocity.y = Math.max(velocity.y, -25);
+  velocity.y = THREE.MathUtils.clamp(
+    velocity.y,
+    -MAX_VERTICAL_SPEED,
+    MAX_VERTICAL_SPEED
+  );
+
+  player.position.addScaledVector(velocity, dt);
+
+  // ---- Ground collision (ALWAYS, even in water) ----
+  const groundHit = getGroundHit(player.position);
+  if (groundHit) {
+    const groundY = groundHit.point.y;
+    const targetY = groundY + PLAYER_RADIUS + GROUND_SKIN;
+
+    if (player.position.y < targetY) {
+      player.position.y = THREE.MathUtils.lerp(
+        player.position.y,
+        targetY,
+        0.35
+      );
+
+      if (velocity.y < 0) velocity.y = 0;
+      onGround = !inWater;
+
+      if (!inWater && keys["Space"]) {
+        velocity.y = JUMP_FORCE;
+        onGround = false;
+      }
+
+      if (inWater) {
+        velocity.y = Math.min(velocity.y, 2);
+      }
+    } else {
+      onGround = false;
+    }
+  } else {
+    onGround = false;
+  }
+
+  if (
+    !Number.isFinite(player.position.x) ||
+    !Number.isFinite(player.position.y) ||
+    !Number.isFinite(player.position.z)
+  ) {
+    console.warn("Player out of bounds — resetting.");
+    player.position.set(0, 10, 0);
+    velocity.set(0, 0, 0);
+  }
+
+  // Splash FX trigger
+  if (!wasInWater && inWater && velocity.y < 0) {
+    spawnSplash();
+  }
+  wasInWater = inWater;
+
+  const camTarget = player.position.clone();
+  camTarget.y += PLAYER_HEIGHT * 0.4;
+
+  let camYaw = yaw;
+  if (shiftLocked) {
+    player.rotation.y = yaw;
+    camYaw = player.rotation.y;
+  }
+
+  const camOffsetDir = new THREE.Vector3(
+    Math.sin(camYaw) * Math.cos(pitch),
+    Math.sin(pitch),
+    Math.cos(camYaw) * Math.cos(pitch)
+  ).normalize();
+
+  const desiredCamOffset = camOffsetDir.clone().multiplyScalar(cameraDistance);
+  const desiredCamPos = camTarget.clone().sub(desiredCamOffset);
+
+  const camGroundHit = getGroundHit(desiredCamPos);
+  if (camGroundHit) {
+    const camGroundY = camGroundHit.point.y + CAMERA_COLLISION_OFFSET;
+    if (desiredCamPos.y < camGroundY) {
+      desiredCamPos.y = camGroundY;
+    }
+  }
+
+  cameraPosCurrent.lerp(desiredCamPos, CAMERA_LERP);
+  camera.position.copy(cameraPosCurrent);
+  camera.lookAt(camTarget);
+
+  player.visible = cameraDistance > minDistance + 0.001;
+
+  timeOfDay += dt * 0.02;
+  if (timeOfDay > 1) timeOfDay -= 1;
+
+  const sunAngle = timeOfDay * Math.PI * 2;
+  if (sunLight) {
+    const heightFactor = Math.max(0, Math.sin(sunAngle));
+
+    sunLight.position.set(
+      Math.cos(sunAngle) * 80,
+      Math.sin(sunAngle) * 90,
+      30
+    );
+    sunLight.intensity = 0.4 + heightFactor * 0.9;
+
+    const sky = scene.background;
+    if (sky) {
+      const t = heightFactor;
+      sky.setRGB(
+        0.7 + t * 0.1,
+        0.8 + t * 0.1,
+        1.0
+      );
+    }
+  }
+
+  if (coordsDiv) {
+    coordsDiv.textContent =
+      `X: ${player.position.x.toFixed(2)}  ` +
+      `Y: ${player.position.y.toFixed(2)}  ` +
+      `Z: ${player.position.z.toFixed(2)}`;
+  }
+
+  updateSplashFX(dt);
+}
+
+// ===== GROUND / WATER / SPLASH HELPERS =====
+function getGroundHit(pos) {
+  if (!terrain) return null;
+  const origin = pos.clone().add(new THREE.Vector3(0, PLAYER_HEIGHT * 2, 0));
+  groundRaycaster.set(origin, downVec);
+  groundRaycaster.far = PLAYER_HEIGHT * 4 + 50;
+  const hits = groundRaycaster.intersectObject(terrain, false);
+  if (hits.length > 0) return hits[0];
+  return null;
+}
+
+function isPlayerInWater(pos) {
+  const dx = pos.x - LAKE_CENTER.x;
+  const dz = pos.z - LAKE_CENTER.z;
+  const dist = Math.sqrt(dx * dx + dz * dz);
+  if (dist > LAKE_RADIUS) return false;
+
+  const feetY = pos.y - PLAYER_RADIUS;
+  return feetY < WATER_LEVEL + 0.05;
+}
+
+function spawnSplash() {
+  if (!scene) return;
+
+  const inner = PLAYER_RADIUS * 0.6;
+  const outer = PLAYER_RADIUS * 1.2;
+  const ringGeo = new THREE.RingGeometry(inner, outer, 32);
+  const ringMat = new THREE.MeshBasicMaterial({
+    color: 0x88ccff,
+    transparent: true,
+    opacity: 1.0,
+    side: THREE.DoubleSide
+  });
+  const ring = new THREE.Mesh(ringGeo, ringMat);
+  ring.position.set(player.position.x, WATER_LEVEL + 0.02, player.position.z);
+  ring.rotation.x = -Math.PI / 2 + 0.25;
+  scene.add(ring);
+  splashRings.push({ mesh: ring, life: 0, maxLife: 0.6 });
+
+  const particleCount = 10;
+  for (let i = 0; i < particleCount; i++) {
+    const pGeo = new THREE.SphereGeometry(0.06, 8, 8);
+    const pMat = new THREE.MeshBasicMaterial({
+      color: 0x99ddff,
+      transparent: true,
+      opacity: 1.0
+    });
+    const p = new THREE.Mesh(pGeo, pMat);
+    const angle = Math.random() * Math.PI * 2;
+    const radius = PLAYER_RADIUS * (0.3 + Math.random() * 0.7);
+    p.position.set(
+      player.position.x + Math.cos(angle) * radius,
+      WATER_LEVEL + 0.05,
+      player.position.z + Math.sin(angle) * radius
+    );
+    scene.add(p);
+    const vel = new THREE.Vector3(
+      (Math.random() - 0.5) * 2,
+      3 + Math.random() * 2,
+      (Math.random() - 0.5) * 2
+    );
+    splashParticles.push({
+      mesh: p,
+      vel,
+      life: 0,
+      maxLife: 0.7
+    });
+  }
+}
+
+function updateSplashFX(dt) {
+  for (let i = splashRings.length - 1; i >= 0; i--) {
+    const r = splashRings[i];
+    r.life += dt;
+    const t = r.life / r.maxLife;
+    if (t >= 1) {
+      scene.remove(r.mesh);
+      splashRings.splice(i, 1);
+      continue;
+    }
+    const scale = 1 + t * 2.5;
+    r.mesh.scale.set(scale, scale, scale);
+    r.mesh.material.opacity = 1 - t;
+    r.mesh.material.color.lerpColors(
+      new THREE.Color(0x5599ff),
+      new THREE.Color(0xffffff),
+      t
+    );
+  }
+
+  for (let i = splashParticles.length - 1; i >= 0; i--) {
+    const p = splashParticles[i];
+    p.life += dt;
+    if (p.life >= p.maxLife) {
+      scene.remove(p.mesh);
+      splashParticles.splice(i, 1);
+      continue;
+    }
+    p.mesh.position.addScaledVector(p.vel, dt);
+    p.vel.y += GRAVITY_WATER * 0.5 * dt;
+    const t = p.life / p.maxLife;
+    p.mesh.material.opacity = 1 - t;
+    p.mesh.material.color.lerpColors(
+      new THREE.Color(0x66bbff),
+      new THREE.Color(0xffffff),
+      t
+    );
+  }
+}
+
+// ===== PORTRAIT LOOP =====
+function animatePortraits(time = 0) {
+  requestAnimationFrame(animatePortraits);
+  portraitRenderers.forEach((pr) => pr.render(time));
+}

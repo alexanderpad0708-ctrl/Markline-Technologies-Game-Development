@@ -1,0 +1,105 @@
+/* Reset */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: "Comic Sans MS", Arial, sans-serif;
+}
+
+/* Background matches homepage */
+body {
+    background: linear-gradient(135deg, #6ea8ff, #9fd3ff);
+    color: #000;
+}
+
+/* Header bar */
+.topbar {
+    background: #4a6cff;
+    padding: 25px;
+    text-align: center;
+    color: white;
+    border-bottom: 5px solid #2f49c7; /* separation bar */
+}
+
+.topbar h1 {
+    font-size: 40px;
+    font-weight: bold;
+}
+
+.slogan {
+    font-size: 18px;
+    margin-top: 5px;
+    font-weight: bold;
+    color: #ffeb3b; /* yellow slogan */
+}
+
+/* Main content */
+.content {
+    max-width: 600px;
+    margin: 100px auto;
+    text-align: center;
+}
+
+.content h2 {
+    font-size: 32px;
+    margin-bottom: 10px;
+}
+
+.content p {
+    font-size: 18px;
+    margin-bottom: 20px;
+}
+
+/* Form layout */
+.login-form {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.login-form input {
+    width: 80%;
+    padding: 14px;
+    margin: 10px 0;
+    border: 2px solid #000;
+    border-radius: 10px;
+    font-size: 16px;
+}
+
+/* Buttons */
+.button {
+    display: inline-block;
+    margin-top: 15px;
+    padding: 14px 28px;
+    background: #ffeb3b;
+    color: #000;
+    text-decoration: none;
+    border-radius: 10px;
+    font-size: 20px;
+    font-weight: bold;
+    border: 2px solid #000;
+    transition: 0.2s;
+}
+
+.button:hover {
+    background: #ffe000;
+}
+
+/* Secondary button */
+.secondary {
+    background: #4a6cff;
+    color: white;
+    margin-top: 10px;
+    border: none;
+}
+
+.secondary:hover {
+    background: #3a58d6;
+}
+
+/* Notes + ID result */
+.note {
+    margin-top: 20px;
+    font-size: 14px;
+    color: #333;
+}

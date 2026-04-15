@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Your Home - Markline Dimensions!</title>
+
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: "Comic Sans MS", Arial, sans-serif;
+        }
+
+        body {
+            background: linear-gradient(135deg, #6ea8ff, #9fd3ff);
+            color: #000;
+        }
+
+        /* HEADER */
+        .topbar {
+            background: #4a6cff;
+            padding: 25px;
+            text-align: center;
+            color: white;
+            border-bottom: 5px solid #2f49c7;
+            position: relative;
+        }
+
+        .topbar h1 {
+            font-size: 40px;
+            font-weight: bold;
+        }
+
+        .slogan {
+            font-size: 18px;
+            margin-top: 5px;
+            font-weight: bold;
+            color: #ffeb3b;
+        }
+
+        /* TOP RIGHT BUTTONS */
+        .top-right-controls {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            display: flex;
+            gap: 12px;
+            align-items: center;
+        }
+
+        .nav-button {
+            background: #ffeb3b;
+            padding: 8px 14px;
+            border-radius: 10px;
+            text-decoration: none;
+            color: #000;
+            font-weight: bold;
+            border: 2px solid #000;
+            transition: 0.2s;
+        }
+
+        .nav-button:hover {
+            background: #ffe000;
+        }
+
+        .menu-wrapper {
+            position: relative;
+        }
+
+        .menu-button {
+            background: #ffffff;
+            border: 2px solid #000;
+            font-size: 22px;
+            padding: 4px 10px;
+            border-radius: 8px;
+            cursor: pointer;
+        }
+
+        .menu-dropdown {
+            display: none;
+            position: absolute;
+            right: 0;
+            top: 40px;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.25);
+            padding: 8px 0;
+            min-width: 150px;
+            z-index: 20;
+            border: 2px solid #000;
+        }
+
+        .menu-dropdown a {
+            display: block;
+            padding: 10px 14px;
+            text-decoration: none;
+            color: black;
+            font-weight: bold;
+        }
+
+        /* MAIN CONTENT */
+        .user-info-block {
+            text-align: left;
+            margin-left: 25px;
+            margin-top: 20px;
+            max-width: 600px;
+        }
+
+        #greeting {
+            font-size: 28px;
+            margin-bottom: 10px;
+            font-weight: bold;
+        }
+
+        .subline {
+            font-size: 20px;
+            margin-bottom: 6px;
+        }
+
+        /* GAME TILE ROW */
+        .tile-row {
+            margin-top: 25px;
+            display: flex;
+            gap: 20px;
+        }
+
+        /* GAME TILE CARD */
+        .game-card {
+            width: 180px;
+            height: 300px;
+            background: #ffeb3b;
+            border: 3px solid #000;
+            border-radius: 12px;
+            padding: 10px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            transition: 0.2s;
+        }
+
+        .game-card:hover {
+            transform: scale(1.03);
+        }
+
+        .placeholder-img {
+            width: 100%;
+            height: 180px;
+            background: #d0d0d0;
+            border: 2px solid #000;
+            border-radius: 8px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-weight: bold;
+        }
+
+        .play-button {
+            background: #4caf50;
+            color: white;
+            text-align: center;
+            padding: 10px;
+            border-radius: 8px;
+            font-weight: bold;
+            border: 2px solid #000;
+            text-decoration: none;
+        }
+
+        .play-button:hover {
+            background: #43a047;
+        }
+    </style>
+
+    <script>
+        window.onload = function () {
+
+            const name = localStorage.getItem("username") || "Explorer";
+            const id = localStorage.getItem("userID") || "0000";
+            const role = localStorage.getItem("userRole") || "Explorer";
+
+            const greetBox = document.getElementById("greeting");
+            const line1 = document.getElementById("line1");
+            const line2 = document.getElementById("line2");
+
+            function getTimeGreeting(hour) {
+                if (hour >= 5 && hour < 12) return "Good morning";
+                if (hour >= 12 && hour < 17) return "Good afternoon";
+                if (hour >= 17 && hour < 21) return "Good evening";
+                return "Good night";
+            }
+
+            const roleGreetings = {
+                "Explorer": "Ready for adventure",
+                "Moderator": "Keeping the peace",
+                "Administrator": "Systems online",
+                "Quality Assurance": "Running diagnostics",
+                "Developer": "Deploying creativity"
+            };
+
+            function getSeasonalGreeting(month) {
+                if (month >= 2 && month <= 4) return "Spring is here";
+                if (month >= 5 && month <= 7) return "Summer vibes";
+                if (month >= 8 && month <= 10) return "Autumn colors";
+                return "Winter chill";
+            }
+
+            const now = new Date();
+            const hour = now.getHours();
+            const month = now.getMonth();
+
+            /* FIXED: ALWAYS textContent → no double # */
+            greetBox.textContent = `${getTimeGreeting(hour)}, ${name} #${id}!`;
+            line1.textContent = roleGreetings[role] || "Exploring the Dimensions";
+            line2.textContent = getSeasonalGreeting(month);
+
+            /* MENU */
+            const menuBtn = document.querySelector(".menu-button");
+            const dropdown = document.querySelector(".menu-dropdown");
+
+            menuBtn.addEventListener("click", (e) => {
+                e.stopPropagation();
+                dropdown.style.display =
+                    dropdown.style.display === "block" ? "none" : "block";
+            });
+
+            document.addEventListener("click", () => {
+                dropdown.style.display = "none";
+            });
+        };
+    </script>
+</head>
+
+<body>
+
+    <header class="topbar">
+        <h1>Markline Dimensions!</h1>
+        <p class="slogan">By Kids, For Kids!</p>
+
+        <div class="top-right-controls">
+            <a href="../forums/forums.html" class="nav-button">Forums</a>
+
+            <div class="menu-wrapper">
+                <button class="menu-button">⋮</button>
+                <div class="menu-dropdown">
+                    <a href="#">Settings</a>
+                    <a href="../index/index.html">Sign Out</a>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main>
+        <div class="user-info-block">
+            <h2 id="greeting"></h2>
+
+            <p class="subline" id="line1"></p>
+            <p class="subline" id="line2"></p>
+
+            <!-- GAME TILE ROW -->
+            <div class="tile-row">
+
+                <!-- GAME CARD -->
+                <div class="game-card">
+                    <div class="placeholder-img">PLACEHOLDER</div>
+                    <a class="play-button" href="../Engine/index.html">PLAY</a>
+                </div>
+
+            </div>
+        </div>
+    </main>
+
+</body>
+</html>

@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Markline Dimensions - Swear Guard!</title>
+
+  <style>
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: "Comic Sans MS", Arial, sans-serif;
+}
+
+body {
+    background: linear-gradient(135deg, #6ea8ff, #9fd3ff);
+    color: #000;
+}
+
+.topbar {
+    background: #4a6cff;
+    padding: 25px;
+    text-align: center;
+    color: white;
+    border-bottom: 5px solid #2f49c7;
+}
+
+.topbar h1 {
+    font-size: 40px;
+    font-weight: bold;
+}
+
+.subtitle {
+    font-size: 18px;
+    margin-top: 5px;
+    font-weight: bold;
+    color: #ffeb3b; /* YELLOW */
+}
+
+.content {
+    max-width: 600px;
+    margin: 60px auto;
+    text-align: center;
+}
+
+.label {
+    font-size: 20px;
+    margin-top: 20px;
+    font-weight: bold;
+}
+
+textarea {
+    width: 100%;
+    padding: 12px;
+    border-radius: 10px;
+    border: 2px solid #000;
+    margin-top: 10px;
+    font-size: 18px;
+}
+
+#swapBtn {
+    display: inline-block;
+    margin-top: 25px;
+    padding: 14px 28px;
+    background: #ffeb3b;
+    color: #000;
+    border-radius: 10px;
+    font-size: 20px;
+    font-weight: bold;
+    border: 2px solid #000;
+    transition: 0.2s;
+    cursor: pointer;
+}
+
+#swapBtn:hover {
+    background: #ffe000;
+}
+
+.output {
+    margin-top: 20px;
+    padding: 15px;
+    background: white;
+    border-radius: 10px;
+    border: 2px solid #000;
+    min-height: 80px;
+    font-size: 20px;
+}
+  </style>
+</head>
+
+<body>
+
+  <div class="topbar">
+    <h1>Markline Dimensions — SwearGuard!</h1>
+    <div class="subtitle">Keeping Families and Children Safe! By Kids, For Kids!</div>
+  </div>
+
+  <div class="content">
+    <div class="label">Input text:</div>
+    <textarea id="inputText" rows="5" placeholder="Type something spicy but Markline-safe..."></textarea>
+
+    <div id="swapBtn">Run WordSwap</div>
+
+    <div class="label">Output (filtered):</div>
+    <div id="outputText" class="output"></div>
+  </div>
+
+  <script src="wordswap.js"></script>
+
+</body>
+</html>

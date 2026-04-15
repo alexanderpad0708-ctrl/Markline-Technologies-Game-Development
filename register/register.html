@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Register - Markline Dimensions!</title>
+  <link rel="stylesheet" href="style.css" />
+
+  <style>
+    .warning-box {
+      background: #ffef9f;
+      border: 2px solid #ffcc4d;
+      padding: 10px;
+      border-radius: 10px;
+      margin: 15px auto;
+      width: 80%;
+      font-size: 14px;
+      color: #7a5a00;
+      text-align: center;
+    }
+
+    .hidden {
+      display: none;
+    }
+  </style>
+</head>
+
+<body>
+  <header class="topbar">
+    <h1>Markline Dimensions!</h1>
+    <p class="slogan">By Kids, For Kids!</p>
+  </header>
+
+  <main class="content">
+    <h2>Create Your Account!</h2>
+    <p>Jump into the fun — safely, smartly, and with style!</p>
+
+    <div class="warning-box">
+      Please select your actual role!  
+      Being a Parent does NOT let you play games unless you join your child.
+    </div>
+
+    <form class="login-form" id="registerForm">
+      <input type="email" id="email" placeholder="Email" required />
+      <input type="password" id="password" placeholder="Password" required />
+      <input type="text" id="username" placeholder="Username" required />
+
+      <select id="role" required>
+        <option value="Kid">Kid</option>
+        <option value="Parent">Parent</option>
+        <option value="FamilyMember">Family Member (Kid in a Family)</option>
+        <option value="Creator">Creator</option>
+      </select>
+
+      <input id="familyId" class="hidden" type="text" placeholder="Family ID (FamilyMember only)" />
+      <input id="parentEmail" class="hidden" type="text" placeholder="Parent Email (FamilyMember only)" />
+
+      <button type="submit" class="button">Sign Up</button>
+    </form>
+
+    <p class="note">Markline protects every player — Safe, Smart, and Built for YOU!</p>
+  </main>
+
+  <!-- ⭐ SIGNUP SOUND (root-level folder) ⭐ -->
+  <audio id="signupSound" src="/sourcesound/signupchimeoggvorbis.ogg" preload="auto"></audio>
+
+  <!-- ⭐ SCRIPT AT BOTTOM ⭐ -->
+  <script type="module">
+    import { auth, db } from "./firebase.js";
+    import { signupUser } from "./scripts/signupUser.js";
+
+    const roleSelect = document.getElementById("role");
+    const familyIdInput = document.getElementById("familyId");
+    const parentEmailInput = document.getElementById("parentEmail");
+
+    function updateRoleFields() {
+      if (roleSelect.value === "FamilyMember") {
+        familyIdInput.classList.remove("hidden");
+        parentEmailInput.classList.remove("hidden");
+      } else {
+        familyIdInput.classList.add("hidden");
+        parentEmailInput.classList.add("hidden");
+      }
+    }
+
+    roleSelect.addEventListener("change", updateRoleFields);
+    updateRoleFields();
+
+    document.getElementById("registerForm").onsubmit = async (event) => {
+      event.preventDefault();
+
+      const email = document.getElementById("email").value;
+      const password = document.getElementById("password").value;
+      const username = document.getElementById("username").value;
+      const role = document.getElementById("role").value;
+
+      const familyId = document.getElementById("familyId").value || null;
+      const parentEmail = document.getElementById("parentEmail").value || null;
+
+      try {
+        const uid = await signupUser(auth, db, {
+          email,
+          password,
+          username,
+          realName: null,
+          role,
+          familyId,
+          parentEmail
+        });
+
+        // ⭐ PLAY SIGNUP SOUND (no redirect) ⭐
+        const chime = document.getElementById("signupSound");
+        chime.currentTime = 0;
+        chime.play().catch(() => {});
+
+        // ⭐ NO REDIRECT ⭐
+        console.log("Signup complete — staying on page so the chime can finish.");
+
+      } catch (err) {
+        alert(err.message);
+      }
+    };
+  </script>
+
+</body>
+</html>
