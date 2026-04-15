@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>Forums - Markline Dimensions!</title>
+    <link rel="stylesheet" href="style.css">
+	<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+  import { getFirestore } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+  const firebaseConfig = {
+    // your config here
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const db = getFirestore(app);
+</script>
+</head>
+<body>
+    <header class="topbar">
+        <h1>Forums</h1>
+        <p class="slogan">Ask Questions, Share Ideas!</p>
+        <a href="../index/index.html" class="back-link">← Back to Home</a>
+    </header>
+
+    <main class="content">
+        <nav class="nav-buttons">
+            <a href="#forums" class="nav-btn active" onclick="showSection('forums')">Forums</a>
+            <a href="#appeals" class="nav-btn" onclick="showSection('appeals')">Appeals</a>
+        </nav>
+
+        <section id="forums" class="forum-section">
+            <h2>Create a New Post</h2>
+            <form id="postForm" class="post-form">
+                <input type="text" id="postTitle" placeholder="Post title..." required>
+                <textarea id="postContent" placeholder="What's on your mind?" rows="5" required></textarea>
+                <button type="submit" class="submit-btn">Post!</button>
+            </form>
+        </section>
+
+        <section class="forum-section">
+            <h2>Recent Posts</h2>
+            <div id="postsList" class="posts-list">
+                <div class="post">
+                    <h3>Welcome to the Forums!</h3>
+                    <p class="post-meta">Posted by Markline Team</p>
+                    <p>Welcome to our community forums! This is where you can ask questions, share ideas, and chat with other players. Have fun and be kind to each other!</p>
+                </div>
+            </div>
+        </section>
+        </section>
+
+        <section id="appeals" class="forum-section hidden">
+            <h2>Submit an Appeal</h2>
+            <p style="margin-bottom: 20px; color: #666;">Have a concern or need to appeal a decision? Let us know!</p>
+            <form id="appealForm" class="post-form">
+                <input type="text" id="appealTitle" placeholder="Appeal subject..." required>
+                <textarea id="appealContent" placeholder="Please describe your appeal..." rows="5" required></textarea>
+                <button type="submit" class="submit-btn">Submit Appeal</button>
+            </form>
+            <div id="appealsList" class="posts-list" style="margin-top: 30px;">
+                <h3>Appeal Status</h3>
+                <p style="color: #666; font-size: 14px; margin-top: 10px;">Your submitted appeals will appear here.</p>
+            </div>
+        </section>
+        </section>
+    </main>
+
+    <script>
+        const API_URL = 'http://localhost:3000/api';
+
+        // Load posts from backend database
+        async function loadPosts() {
+            try {
+                const response = await fetch(`${API_URL}/forum/posts`);
+                if (!response.ok) throw new Error('Failed to fetch posts');
+                
+                const posts = await response.json();
+                const postsList = document.getElementById('postsList');
+                postsList.innerHTML = '';
+                
+                // Add posts from database
+                posts.forEach(post => {
+                    const postEl = document.createElement('div');
+                    postEl.className = 'post';
+                    const createdAt = new Date(post.created_at).toLocaleString();
+                    postEl.innerHTML = `
+                        <h3>${escapeHtml(post.title)}</h3>
+                        <p class="post-meta">Posted by ${escapeHtml(post.author)} on ${createdAt}</p>
+                        <p>${escapeHtml(post.content)}</p>
+                    `;
+                    postsList.appendChild(postEl);
+                });
+                
+                // Add welcome post if no other posts
+                if (posts.length === 0) {
+                    const welcomePost = document.createElement('div');
+                    welcomePost.className = 'post';
+                    welcomePost.innerHTML = `
+                        <h3>Welcome to the Forums!</h3>
+                        <p class="post-meta">Posted by Markline Team</p>
+                        <p>Welcome to our community forums! This is where you can ask questions, share ideas, and chat with other players. Have fun and be kind to each other!</p>
+                    `;
+                    postsList.appendChild(welcomePost);
+                }
+            } catch (error) {
+                console.error('Error loading posts:', error);
+                const postsList = document.getElementById('postsList');
+                postsList.innerHTML = '<p style="color: red;">Error loading posts. Make sure the server is running.</p>';
+            }
+        }
+
+        // Create new forum post
+        document.getElementById('postForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const title = document.getElementById('postTitle').value.trim();
+            const content = document.getElementById('postContent').value.trim();
+            const author = localStorage.getItem('username') || 'Anonymous';
+            
+            if (!title || !content) {
+                alert('Please fill in both fields!');
+                return;
+            }
+            
+            try {
+                const response = await fetch(`${API_URL}/forum/posts`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ title, content, author })
+                });
+                
+                if (!response.ok) throw new Error('Failed to create post');
+                
+                // Clear form
+                document.getElementById('postForm').reset();
+                
+                // Reload posts
+                loadPosts();
+                
+                alert('Post created successfully!');
+            } catch (error) {
+                console.error('Error creating post:', error);
+                alert('Failed to create post. Make sure the server is running.');
+            }
+        });
+
+        // Create new appeal
+        document.getElementById('appealForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const title = document.getElementById('appealTitle').value.trim();
+            const content = document.getElementById('appealContent').value.trim();
+            const author = localStorage.getItem('username') || 'Anonymous';
+            
+            if (!title || !content) {
+                alert('Please fill in all fields!');
+                return;
+            }
+            
+            try {
+                const response = await fetch(`${API_URL}/appeals`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ title, content, author })
+                });
+                
+                if (!response.ok) throw new Error('Failed to submit appeal');
+                
+                // Clear form
+                document.getElementById('appealForm').reset();
+                
+                // Reload appeals
+                loadAppeals();
+                
+                alert('Appeal submitted successfully!');
+            } catch (error) {
+                console.error('Error submitting appeal:', error);
+                alert('Failed to submit appeal. Make sure the server is running.');
+            }
+        });
+
+        // Load appeals from backend database (user's appeals only)
+        async function loadAppeals() {
+            try {
+                const author = localStorage.getItem('username') || 'Anonymous';
+                const response = await fetch(`${API_URL}/appeals/user/${encodeURIComponent(author)}`);
+                if (!response.ok) throw new Error('Failed to fetch appeals');
+                
+                const appeals = await response.json();
+                const appealsList = document.getElementById('appealsList');
+                
+                if (appeals.length === 0) {
+                    appealsList.innerHTML = '<p style="color: #666; font-size: 14px; margin-top: 10px;">Your submitted appeals will appear here.</p>';
+                    return;
+                }
+                
+                let html = '<h3>Appeal Status</h3>';
+                appeals.forEach(appeal => {
+                    const submittedAt = new Date(appeal.created_at).toLocaleString();
+                    html += `
+                        <div class="appeal-item">
+                            <h4>${escapeHtml(appeal.title)}</h4>
+                            <p class="post-meta">Submitted: ${submittedAt} | Status: <strong>${escapeHtml(appeal.status)}</strong></p>
+                            <p>${escapeHtml(appeal.content)}</p>
+                        </div>
+                    `;
+                });
+                
+                appealsList.innerHTML = html;
+            } catch (error) {
+                console.error('Error loading appeals:', error);
+                const appealsList = document.getElementById('appealsList');
+                appealsList.innerHTML = '<p style="color: red;">Error loading appeals. Make sure the server is running.</p>';
+            }
+        }
+
+        // Security: escape HTML to prevent XSS
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // Show/hide sections
+        function showSection(section) {
+            const forumSection = document.getElementById('forums');
+            const appealsSection = document.getElementById('appeals');
+            const forumBtn = document.querySelectorAll('.nav-btn')[0];
+            const appealsBtn = document.querySelectorAll('.nav-btn')[1];
+            
+            if (section === 'forums') {
+                forumSection.style.display = 'block';
+                appealsSection.classList.add('hidden');
+                forumBtn.classList.add('active');
+                appealsBtn.classList.remove('active');
+            } else if (section === 'appeals') {
+                forumSection.style.display = 'none';
+                appealsSection.classList.remove('hidden');
+                forumBtn.classList.remove('active');
+                appealsBtn.classList.add('active');
+                loadAppeals();
+            }
+        }
+
+        // Load posts and appeals on page load
+        window.addEventListener('load', function() {
+            loadPosts();
+            loadAppeals();
+            
+            // Refresh every 30 seconds to show new posts
+            setInterval(loadPosts, 30000);
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Login - Markline Dimensions!</title>
+  <link rel="stylesheet" href="style.css" />
+  <script> import { db } from "../firebase/firebase-init.js";
+import { doc, setDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+await setDoc(doc(db, "users", uid), {
+  email,
+  createdAt: Date.now()
+}); </script>
+
+  <script>
+    function visitorLogin() {
+      alert("Visitor login triggered!");
+
+      const visitorNumber = Math.floor(Math.random() * 9000) + 1000;
+      const visitorName = "Visitor" + visitorNumber;
+      const visitorID = "#" + visitorNumber;
+
+      console.log("Saving visitor username:", visitorName);
+      console.log("Saving visitor ID:", visitorID);
+
+      localStorage.setItem("username", visitorName);
+      localStorage.setItem("userID", visitorID);
+
+      console.log("REDIRECTING NOW");
+      window.location.href = "../home/home.html";
+    }
+
+    function loginUser(event) {
+      event.preventDefault();
+
+      const username = document.getElementById("username").value.trim();
+      const password = document.getElementById("password").value;
+
+      if (!username || !password) {
+        alert("Please enter both username and password!");
+        return;
+      }
+
+      const userID = "#" + Math.floor(Math.random() * 9000 + 1000);
+
+      console.log("Saving username:", username);
+      console.log("Saving userID:", userID);
+
+      localStorage.setItem("username", username);
+      localStorage.setItem("userID", userID);
+
+      window.location.href = "../home/home.html";
+    }
+  </script>
+
+</head>
+
+<body>
+  <header class="topbar">
+    <h1>Markline Dimensions!</h1>
+    <p class="slogan">By Kids, For Kids!</p>
+  </header>
+
+  <main class="content">
+    <h2>Welcome Back, Explorer!</h2>
+    <p>Jump into the fun — safely, smartly, and with style!</p>
+
+    <form class="login-form" onsubmit="loginUser(event)">
+      <input type="text" id="username" placeholder="Username" required />
+      <input type="password" id="password" placeholder="Password" required />
+      <button type="submit" class="button">Log In</button>
+    </form>
+
+    <a href="../register/register.html" class="button secondary">Create Account!</a>
+    <button type="button" class="button secondary" onclick="visitorLogin()">
+      Try Dimensions WITHOUT an Account!
+    </button>
+
+    <p class="note">Markline protects every player — Safe, Smart, and Built for YOU!</p>
+  </main>
+</body>
+</html>
+
+<noscript>
+  JavaScript is required to use Markline Dimensions.
+  Without JavaScript, it won't work!
+  So, go to your browser settings and enable JavaScript.
+</noscript>

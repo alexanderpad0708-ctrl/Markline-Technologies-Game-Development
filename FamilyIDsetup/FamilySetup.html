@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Create Your Family</title>
+  <style>
+    body {
+      font-family: "Comic Sans MS", sans-serif;
+      background: linear-gradient(#b6d9ff, #dff0ff);
+      padding: 40px;
+      text-align: center;
+    }
+
+    .window {
+      background: #ffffff;
+      border: 3px solid #6aa9ff;
+      border-radius: 15px;
+      width: 380px;
+      margin: auto;
+      padding: 25px;
+      box-shadow: 0 0 15px rgba(0,0,0,0.15);
+    }
+
+    h2 {
+      color: #2a6ad9;
+      font-size: 26px;
+      margin-bottom: 10px;
+    }
+
+    p {
+      color: #333;
+      font-size: 16px;
+    }
+
+    .warning {
+      background: #ffefb0;
+      border: 2px solid #ffcc4d;
+      padding: 10px;
+      border-radius: 10px;
+      margin-bottom: 15px;
+      font-size: 14px;
+      color: #7a5a00;
+    }
+
+    button {
+      background: #4a90e2;
+      color: white;
+      border: none;
+      padding: 14px 24px;
+      border-radius: 10px;
+      cursor: pointer;
+      font-size: 18px;
+      margin-top: 10px;
+    }
+
+    button:hover {
+      background: #357ac9;
+    }
+
+    #result {
+      margin-top: 20px;
+      font-size: 18px;
+      color: #2a6ad9;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="window">
+    <h2>Parent Setup</h2>
+
+    <div class="warning">
+      This page is for grown‑ups only.<br>
+      Kids, please ask a parent for help!
+    </div>
+
+    <p>Click the button below to create your Family ID.</p>
+    <button onclick="createFamily()">Create Family</button>
+
+    <p id="result"></p>
+  </div>
+
+  <script type="module">
+    import { auth, db } from "./firebase.js";
+    import { doc, setDoc, updateDoc, serverTimestamp } 
+      from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+    async function createFamily() {
+      const user = auth.currentUser;
+      if (!user) {
+        document.getElementById("result").innerText = 
+          "Please sign in first.";
+        return;
+      }
+
+      const uid = user.uid;
+      const familyId = uid; // Parent UID becomes Family ID
+
+      // Create family document
+      await setDoc(doc(db, "families", familyId), {
+        familyId: familyId,
+        managerUid: uid,
+        managerEmail: user.email,
+        kidUids: [],
+        kidEmails: [],
+        createdAt: serverTimestamp(),
+        settings: {
+          ccAllEmails: true,
+          enforceChatRestrictions: true,
+          allowPublishing: false,
+          allowChat: true,
+          allowFriends: true
+        }
+      });
+
+      // Update user document
+      await updateDoc(doc(db, "users", uid), {
+        familyId: familyId,
+        isFamilyManager: true,
+        role: "Parent"
+      });
+
+      document.getElementById("result").innerText =
+        "Your Family ID is: " + familyId;
+    }
+  </script>
+
+</body>
+</html>
